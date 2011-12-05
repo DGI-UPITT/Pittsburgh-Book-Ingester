@@ -37,17 +37,17 @@ def processBookFolder(fedora, folder):
 
     bookName = os.path.basename(folder)
     bookPid = "%s:%s" % (config.fedoraNS, bookName)
-    book = addCollectionToFedora(fedora, unicode(bookName), bookPid, parentPid=config.bookCollectionPid, contentModel="islandora:bookCModel")
+    book = addCollectionToFedora(fedora, unicode(bookName), bookPid, parentPid=config.bookCollectionPid, contentModel="archiveorg:bookCModel")
 
     # load the custom datastreams
-    streams = [ 'dc', 'marcxml', 'mets', 'mods' ]
+    streams = [ 'DC', 'MARCXML', 'METS', 'MODS' ]
     for s in streams:
-        streamFile = "%s.%s.xml" % (bookName, s)
+        streamFile = "%s.%s.xml" % (bookName, s.lower())
         streamSource = os.path.join(folder, streamFile)
         if os.path.isfile(streamSource):
-            print("Add custom %s datastream to book (%s)" % (s.upper(), streamSource))
+            print("Add custom %s datastream to book (%s)" % (s, streamSource))
             if not DRYRUN:
-                fedoraLib.update_datastream(book, s.upper(), streamSource, label='%s Data' % s.upper(), mimeType=misc.getMimeType("xml"))
+                fedoraLib.update_datastream(book, s, streamSource, label='%s Data' % s, mimeType=misc.getMimeType("xml"))
 
     print("Create thumbnail for book using %s" % pages[0])
     # create a TN image using page 1
@@ -71,26 +71,42 @@ def processBookFolder(fedora, folder):
         print("Ingesting object %d of %d: %s" % (idx+1, count, page))
 
         if not DRYRUN:
+            basePage = os.path.splitext(os.path.basename(page))[0]
+
+            #pagePid = fedora.getNextPID(config.fedoraNS)
+            pagePid = "%s-%03d" % (bookPid, idx+1)
+            # pageCModel doesn't exist - its just here as a placeholder
+
+            extraNamespaces = { 'pageNS' : 'info:islandora/islandora-system:def/pageinfo#' }
+            extraRelationships = { fedora_relationships.rels_predicate('pageNS', 'isPageNumber') : str(idx+1) }
+
             # create the object (page)
             try:
-                #pagePid = gedora.getNextPID(config.fedoraNS)
-                pagePid = "%s-%03d" % (bookPid, idx+1)
-                obj = addObjectToFedora(fedora, unicode("%s-%s" % (bookName, os.path.basename(page))), pagePid, bookPid, "islandora:pageCModel")
+                obj = addObjectToFedora(fedora, unicode("%s-%s" % (bookName, basePage)), pagePid, bookPid, "archiveorg:pageCModel",
+                        extraNamespaces=extraNamespaces, extraRelationships=extraRelationships)
             except FedoraConnectionException, fcx:
                 print("Connection error while trying to add fedora object (%s) - the connection to fedora may be broken", page)
                 continue
 
-            # load the tiff
-            fedoraLib.update_datastream(obj, "TIFF", os.path.join(folder, page), label=unicode(os.path.basename(page)), mimeType=misc.getMimeType("tiff"))
+            # ingest the tiff
+            tifFile = os.path.join(folder, page)
+            fedoraLib.update_datastream(obj, "TIFF", tifFile, label=unicode("%s.tif" % basePage), mimeType=misc.getMimeType("tiff"))
+            # lets try creating a jp2 file
+            jp2File = os.path.join(config.tempDir, "%s.jp2" % basePage)
+            converter.tif_to_jp2(tifFile, jp2File, 'default', 'default')
+            fedoraLib.update_datastream(obj, "JP2", jp2File, label=unicode("%s.jp2" % basePage), mimeType=misc.getMimeType("jp2"))
+            os.remove(jp2File) # finished with that
 
-            # load the ocr if it exists
+            # ingest the ocr if it exists
             if ocrzip:
                 # try to find the files' ocr data
-                ocrFileName = os.path.splitext(os.path.basename(page))[0] + ".txt"
+                ocrFileName = "%s.txt" % basePage
                 if ocrFileName in ocrzip.namelist():
                     ocrFile = ocrzip.extract(ocrFileName, config.tempDir)
                     fedoraLib.update_datastream(obj, "OCR", os.path.join(config.tempDir, ocrFile), label=unicode(ocrFileName), mimeType=misc.getMimeType("txt"))
                     os.remove(os.path.join(config.tempDir, ocrFileName)) # get rid of that temp file
+        sys.stdout.flush()
+        sys.stderr.flush()
 
     ocrzip.close()
 
@@ -186,6 +202,7 @@ def main(argv):
     print("+-Scanning for books to ingest")
     print(" +-Scanning folder: %s" % config.inDir)
 
+    sys.stdout.flush()
     fileList = os.listdir(config.inDir)
     numBooks = 0
     for file in fileList:
