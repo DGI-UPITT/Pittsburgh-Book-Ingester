@@ -1,3 +1,4 @@
+from types import *
 from islandoraUtils import fileConverter as converter
 from islandoraUtils import fileManipulator
 from islandoraUtils import misc
@@ -29,7 +30,7 @@ def connectToFedora(url, user, pw):
 
 """ ====== MANAGING FEDORA OBJECTS ====== """
 
-def createRelsExt(childObject, parentPid, contentModel, tnUrl=None):
+def createRelsExt(childObject, parentPid, contentModel, extraNamespaces={}, extraRelationships={}):
     """
     Create the RELS-EXT relationships between childObject and object:parentPid
     We set the default namespace for our interconnections, then apply the content model, and make
@@ -37,10 +38,22 @@ def createRelsExt(childObject, parentPid, contentModel, tnUrl=None):
     collection content model then hilarity could ensue...
     """
 
+    nsmap = [ fedora_relationships.rels_namespace('fedora', 'info:fedora/fedora-system:def/relations-external#'),
+              fedora_relationships.rels_namespace('fedora-model', 'info:fedora/fedora-system:def/model#')
+             ]
+    if extraNamespaces and type(extraNamespaces) is DictType:
+        for k, v in extraNamespaces.iteritems():
+            nsmap.append(fedora_relationships.rels_namespace(k, v))
+
     #add relationships
-    rels_ext=fedora_relationships.rels_ext(childObject, fedora_relationships.rels_namespace('fedora-model', 'info:fedora/fedora-system:def/model#'))
+    rels_ext=fedora_relationships.rels_ext(childObject, nsmap, 'fedora')
+
     rels_ext.addRelationship(fedora_relationships.rels_predicate('fedora-model', 'hasModel'), [contentModel, "pid"])
-    rels_ext.addRelationship('isMemberOfCollection', [parentPid, "pid"])
+    rels_ext.addRelationship(fedora_relationships.rels_predicate('fedora', 'isMemberOfCollection'), [parentPid, "pid"])
+    if extraRelationships and type(extraRelationships) is DictType:
+        for k, v in extraRelationships.iteritems():
+            rels_ext.addRelationship(k, [v, "literal"])
+
     loop = True
     while loop:
         loop = False
@@ -53,6 +66,7 @@ def createRelsExt(childObject, parentPid, contentModel, tnUrl=None):
             else:
                 print("Error updating obj(%s) RELS-EXT" % childObject.pid)
     return rels_ext
+
 
 def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", contentModel="islandora:collectionCModel", tnUrl=None):
     """
@@ -92,7 +106,7 @@ def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", co
 
     return collection_object
 
-def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=None):
+def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=None, extraNamespaces={}, extraRelationships={}):
     """
     Add an object (not a collection) to fedora
     @param fedora The fedora instance to add the object to
@@ -125,12 +139,12 @@ def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=Non
         fedoraLib.update_datastream(obj, 'TN', tnUrl, label=myLabel+'_TN.jpg', mimeType='image/jpeg')
 
     # rels-ext relations
-    obj_relsext = createRelsExt(obj, parentPid, contentModel)
+    obj_relsext = createRelsExt(obj, parentPid, contentModel, extraNamespaces=extraNamespaces, extraRelationships=extraRelationships)
 
     return obj
 
 # this function is taken from the old book converter
-def sendSolr():
+def sendToSolr():
     '''
     This is a helper function that creates and sends information to solr for ingest
     '''
