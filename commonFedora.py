@@ -21,12 +21,11 @@ def connectToFedora(url, user, pw):
         return None
 
     try:
-        f = FedoraClient(connection)
+        return FedoraClient(connection)
     except Exception, ex:
         print("Exception while opening fedora client")
         print("Check if fedora is running and your login information is correct")
-        return None
-    return f
+    return None
 
 """ ====== MANAGING FEDORA OBJECTS ====== """
 
@@ -66,7 +65,6 @@ def createRelsExt(childObject, parentPid, contentModel, extraNamespaces={}, extr
             else:
                 print("Error updating obj(%s) RELS-EXT" % childObject.pid)
     return rels_ext
-
 
 def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", contentModel="islandora:collectionCModel", tnUrl=None):
     """
@@ -144,6 +142,7 @@ def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=Non
     return obj
 
 # this function is taken from the old book converter
+# it might not be needed as these features may be automatic
 def sendToSolr():
     '''
     This is a helper function that creates and sends information to solr for ingest
