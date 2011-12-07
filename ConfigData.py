@@ -19,8 +19,6 @@ class ConfigData:
         self.inDir = None
         self.hostCollectionName = None
         self.hostCollectionPid = None
-        self.datastreams = []
-        self.converters = {}
         self.tempDir = os.getcwd() # temporary files will go through here
 
     def parse(self, configFile):
@@ -41,7 +39,6 @@ class ConfigData:
             self.solrUrl = cfgp.get("Solr", "url")
             self.inDir = os.path.expanduser(cfgp.get("Controller", "input_dir"))
             self.mailTo = cfgp.get("Controller", "mail_to").replace(",", " ")
-            self.datastreams = cfgp.get("Controller", "datastreams").split(",")
         except ConfigParser.NoSectionError, nsx:
             print("Error while parsing config file: %s" % nsx)
             return False
@@ -49,45 +46,7 @@ class ConfigData:
             print("Error while parsing config file: %s" % nox)
             return False
 
-        try:
-            for key1 in self.datastreams:
-                for key2 in self.datastreams:
-                    option = "%s2%s" % (key1, key2)
-                    if cfgp.has_option("Commands", option):
-                        self.converters[option] = cfgp.get("Commands", option)
-        except ConfigParser.NoOptionError, nox:
-            print("Error while parsing converter commands from config file")
-            return False
         return True
-
-    def writeSaveHeader(self):
-        fp = open(self.saveFile, "w")
-        # prep the config file for output
-        cfgp = ConfigParser.SafeConfigParser()
-
-        cfgp.add_section("Fedora")
-        cfgp.set("Fedora", "url", self.fedoraUrl)
-        cfgp.set("Fedora", "namespace", self.fedoraNS)
-        cfgp.set("Fedora", "username", self.fedoraUser)
-        cfgp.set("Fedora", "password", self.fedoraPW)
-        cfgp.set("Fedora", "host_collection_name", self.hostCollectionName)
-        cfgp.set("Fedora", "host_collection_pid", self.hostCollectionPid)
-        cfgp.set("Fedora", "book_collection_name", self.bookCollectionName)
-        cfgp.set("Fedora", "book_collection_pid", self.bookCollectionPid)
-        cfgp.add_section("Solr")
-        cfgp.set("Solr", "url", self.solrUrl)
-        cfgp.add_section("Controller")
-        cfgp.set("Controller", "input_dir", self.inDir)
-        cfgp.set("Controller", "mail_to", self.mailTo.replace(" ", ","))
-        cfgp.set("Controller", "datastreams", ",".join(self.datastreams))
-
-        cfgp.add_section("Commands")
-        for k, v in self.converters.iteritems():
-            cfgp.set("Commands", k, v.replace("%", "%%"))
-
-        cfgp.write(fp)
-        fp.flush()
-        fp.close()
 
     def printSettings(self):
         print("======================================================")
@@ -106,10 +65,6 @@ class ConfigData:
         print("\n[Controller]")
         print("input_dir = %s" % self.inDir)
         print("mail_to = %s" % self.mailTo)
-        print("datastreams = %s" % str(self.datastreams))
-        print("\n[Commands]")
-        for k, v in self.converters.iteritems():
-            print("%s = %s" % (k, v))
         print("======================================================")
 
     def getConverterCommand(self, fr, to):
