@@ -35,6 +35,12 @@ def createRelsExt(childObject, parentPid, contentModel, extraNamespaces={}, extr
     We set the default namespace for our interconnections, then apply the content model, and make
     childObject a member of the object:parentPid collection.  If object:parentPid doesn't have the
     collection content model then hilarity could ensue...
+    @param childObject The FedoraObject to attach the RELS-EXT to.
+    @param parentPid The pid of the parent to assign to childObject.
+    @param contentModel The contentmode to give to childObject.
+    @param extraNamespaces Any extra namespaces to put in the RELS-EXT data.
+    @param extraRelationsips Any additional relationship values to assign to childObject.  By default
+           the object gets: hasModel:contentModel and isMemberOfCollection:parentPid
     """
 
     nsmap = [ fedora_relationships.rels_namespace('fedora', 'info:fedora/fedora-system:def/relations-external#'),
@@ -110,8 +116,8 @@ def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=Non
     @param fedora The fedora instance to add the object to
     @param myLabel The label to apply to the object object
     @param myPid The pid of the object to try and create, if the pid is already a valid object/collection, then return that object instead
-    @parentPid [optional] The parent object to nest this one under
-    @contentModel [optional] The content model to attach to this object
+    @parentPid The parent object to nest this one under
+    @contentModel The content model to attach to this object
     @tnUrl [optional] The url of an image to use as the thumbnail
     """
     # check for invalid parentPid, invalid contentModel
@@ -129,6 +135,7 @@ def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=Non
             raise fcx
 
     obj = fedora.createObject(myPid, label=myLabel)
+    print("Object created")
 
     # thumbnail, if one is supplied
     if tnUrl:
@@ -144,9 +151,9 @@ def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=Non
 # this function is taken from the old book converter
 # it might not be needed as these features may be automatic
 def sendToSolr():
-    '''
+    """
     This is a helper function that creates and sends information to solr for ingest
-    '''
+    """
 
     """
     solrFile = os.path.join(os.path.dirname(config["modsFilePath"]), 'mods_book_solr.xml')
@@ -154,11 +161,12 @@ def sendToSolr():
     solrFileHandle = open(solrFile, 'r')
     solrFileContent = solrFileHandle.read()
     solrFileContent = solrFileContent[solrFileContent.index('\n'):]
-    curlCall = 'curl ' + config.solrUrl + '/update?commit=true' + r" -H 'Content-Type: text/xml' --data-binary '" + solrFileContent + r"'"
-    # I don't think thise r's are needed here --------------------^-------------------------------------------------------------------^
+    curlCall = 'curl %s/update?commit=true -H "Content-Type: text/xml" --data-binary "%s"' % (config.solrUrl, solrFileContent)
+
+    # be careful here, shell=True can cause problems
     r = subprocess.call(curlCall, shell=True)
     if r != 0:
-        logging.error('Trouble currling with Solr power. Curl returned code: ' + str(r))
+        logging.error('Trouble currling with Solr power. Curl returned code: %d' % r)
     solrFileHandle.close()
     """
     return True
