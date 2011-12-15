@@ -1,4 +1,5 @@
 from types import *
+import os
 from islandoraUtils import fileConverter as converter
 from islandoraUtils import fileManipulator
 from islandoraUtils import misc
@@ -101,9 +102,8 @@ def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", co
 
     # thumnail, if one is supplied
     if tnUrl:
-        # possibly check if tnUrl is a valid jpg
-        #add a TN datastream to the object after creating it from the book cover
-        fedoraLib.update_datastream(collection_object, 'TN', tnUrl, label=myLabel+'_TN.jpg', mimeType='image/jpeg')
+        tnExt = os.path.splitext(tnUrl)[1]
+        fedoraLib.update_datastream(collection_object, u'TN', tnUrl, label=u"%s_TN%s" % (myLabel, tnExt), mimeType=misc.getMimeType(tnExt))
 
     # rels-ext relations
     collection_relsext = createRelsExt(collection_object, parentPid, contentModel)
