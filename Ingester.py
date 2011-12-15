@@ -9,7 +9,8 @@ import sys, os, time, glob, signal, subprocess, atexit
 import zipfile
 from islandoraUtils import fileConverter as converter
 from optparse import OptionParser
-import pdb
+from datetime import datetime as dt
+#import pdb
 
 from commonFedora import *
 from ConfigData import *
@@ -37,6 +38,7 @@ def processBookFolder(fedora, folder):
 
     bookName = os.path.basename(folder)
     bookPid = "%s:%s" % (config.fedoraNS, bookName)
+    # the actual book is a collection
     book = addCollectionToFedora(fedora, unicode(bookName), bookPid, parentPid=config.bookCollectionPid, contentModel="archiveorg:bookCModel")
 
     # load the custom datastreams
@@ -68,13 +70,13 @@ def processBookFolder(fedora, folder):
         ocrzip = None
 
     for idx, page in enumerate(pages):
-        print("Ingesting object %d of %d: %s" % (idx+1, count, page))
+        print("\n==========\nIngesting object %d of %d: %s" % (idx+1, count, page))
 
         if not DRYRUN:
             basePage = os.path.splitext(os.path.basename(page))[0]
 
             #pagePid = fedora.getNextPID(config.fedoraNS)
-            pagePid = "%s-%03d" % (bookPid, idx+1)
+            pagePid = "%s-%d" % (bookPid, idx+1)
             # pageCModel doesn't exist - its just here as a placeholder
 
             extraNamespaces = { 'pageNS' : 'info:islandora/islandora-system:def/pageinfo#' }
@@ -91,7 +93,8 @@ def processBookFolder(fedora, folder):
             # ingest the tiff
             tifFile = os.path.join(folder, page)
             fedoraLib.update_datastream(obj, "TIFF", tifFile, label=unicode("%s.tif" % basePage), mimeType=misc.getMimeType("tiff"))
-            # lets try creating a jp2 file
+
+            # create a JP2 datastream
             jp2File = os.path.join(config.tempDir, "%s.jp2" % basePage)
             converter.tif_to_jp2(tifFile, jp2File, 'default', 'default')
             fedoraLib.update_datastream(obj, "JP2", jp2File, label=unicode("%s.jp2" % basePage), mimeType=misc.getMimeType("jp2"))
@@ -196,25 +199,37 @@ def main(argv):
         message.addLine("Error connecting to fedora instance at %s" % config.fedoraUrl)
         return 5
 
-    collection = addCollectionToFedora(fedora, config.hostCollectionName, myPid=config.hostCollectionPid)
-    bookCollection = addCollectionToFedora(fedora, config.bookCollectionName, myPid=config.bookCollectionPid, parentPid=config.hostCollectionPid)
+    # the host collection (topmost)
+    collection = addCollectionToFedora(fedora, config.hostCollectionName, myPid=config.hostCollectionPid, tnUrl=config.hostCollectionIcon)
+    # the aggregate (contains the books)
+    bookCollection = addCollectionToFedora(fedora, config.bookCollectionName, myPid=config.bookCollectionPid, parentPid=config.hostCollectionPid, tnUrl=config.bookCollectionIcon)
+    # the actual books are created later
 
+    print("Begin timer")
+    start = dt.now()
     print("+-Scanning for books to ingest")
     print(" +-Scanning folder: %s" % config.inDir)
 
+    # we want the header information to display now instead of mixed up later with the curl status updates, so flush here
     sys.stdout.flush()
+    sys.stderr.flush()
+
+    # this is the list of all folders to search in for books
     fileList = os.listdir(config.inDir)
     numBooks = 0
     for file in fileList:
         fullDirectory = os.path.join(config.inDir, file)
         if os.path.isdir(fullDirectory):
-            # check for datastream source
+            # @file if a folder - we assume its a book and process its contents
+            # this will change if/when we get an index file - then we don't have to search for items
             print("Found book folder %s" % file)
             if processBookFolder(fedora, fullDirectory):
                 numBooks = numBooks + 1
-                break
 
     message.addLine("Script run complete: %d books ingested" % numBooks)
+    end = dt.now()
+    print("Total execution time: %s" % (end - start))
+    message.addLine("Total execution time: %s" % (end - start))
     return 0
 
 if __name__ == "__main__":
