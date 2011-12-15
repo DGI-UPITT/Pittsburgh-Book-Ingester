@@ -19,6 +19,10 @@ class ConfigData:
         self.inDir = None
         self.hostCollectionName = None
         self.hostCollectionPid = None
+        self.hostCollectionIcon = None
+        self.bookCollectionName = None
+        self.bookCollectionPid = None
+        self.bookCollectionIcon = None
         self.tempDir = os.getcwd() # temporary files will go through here
 
     def parse(self, configFile):
@@ -46,6 +50,16 @@ class ConfigData:
             print("Error while parsing config file: %s" % nox)
             return False
 
+        try:
+            self.hostCollectionIcon = os.path.expanduser(cfgp.get("Controller", "host_collection_thumbnail"))
+        except:
+            self.hostCollectionIcon = None
+
+        try :
+            self.bookCollectionIcon = os.path.expanduser(cfgp.get("Controller", "book_collection_thumbnail"))
+        except:
+            self.bookCollectionIcon = None
+
         return True
 
     def printSettings(self):
@@ -64,6 +78,8 @@ class ConfigData:
         print("url = %s" % self.solrUrl)
         print("\n[Controller]")
         print("input_dir = %s" % self.inDir)
+        print("host_collection_thumbnail = %s" % self.hostCollectionIcon)
+        print("book_collection_thumbnail = %s" % self.bookCollectionIcon)
         print("mail_to = %s" % self.mailTo)
         print("======================================================")
 
