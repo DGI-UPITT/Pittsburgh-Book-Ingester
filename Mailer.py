@@ -47,3 +47,4 @@ class EmailMessage:
     def send(self):
         if self.subject and self.addrs:
             sendEmail(" ".join(self.addrs), self.subject, self.message)
+        print("Email report sent")
