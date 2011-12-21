@@ -14,13 +14,40 @@ from datetime import datetime as dt
 
 from commonFedora import *
 from ConfigData import *
-import Mailer
+from Mailer import *
 
 DRYRUN = False
 
-GENERATE_ME = "*"
 config = ConfigData()
-message = Mailer.EmailMessage()
+message = EmailMessage()
+
+""" ====== INGEST FOLDERS IN A FOLDER ====== """
+def processFolder(fedora, folder):
+
+    print("+-Scanning for books to ingest")
+    print(" +-Scanning folder: %s" % config.inDir)
+
+    # the collection overhead
+    # the host collection (topmost)
+    collection = addCollectionToFedora(fedora, config.hostCollectionName, myPid=config.hostCollectionPid, tnUrl=config.hostCollectionIcon)
+    # the aggregate (contains the books)
+    myCollection = addCollectionToFedora(fedora, config.myCollectionName, myPid=config.myCollectionPid, parentPid=config.hostCollectionPid, tnUrl=config.myCollectionIcon)
+    # the actual books are created later
+
+    # this is the list of all folders to search in for books
+    fileList = os.listdir(folder)
+    numBooks = 0
+    for file in fileList:
+        fullDirectory = os.path.join(folder, file)
+        if os.path.isdir(fullDirectory):
+            # @file if a folder - we assume its a book and process its contents
+            # this will change if/when we get an index file - then we don't have to search for items
+            print("Found book folder %s" % file)
+            if file != "31735056286671":
+                continue
+            if processBookFolder(fedora, fullDirectory):
+                numBooks = numBooks + 1
+    return numBooks
 
 """ ====== INGEST FILES IN A FOLDER ====== """
 def processBookFolder(fedora, folder):
@@ -39,7 +66,7 @@ def processBookFolder(fedora, folder):
     bookName = os.path.basename(folder)
     bookPid = "%s:%s" % (config.fedoraNS, bookName)
     # the actual book is a collection
-    book = addCollectionToFedora(fedora, unicode(bookName), bookPid, parentPid=config.bookCollectionPid, contentModel="archiveorg:bookCModel")
+    book = addCollectionToFedora(fedora, unicode(bookName), bookPid, parentPid=config.myCollectionPid, contentModel="archiveorg:bookCModel")
 
     # load the custom datastreams
     streams = [ 'DC', 'MARCXML', 'METS', 'MODS' ]
@@ -57,7 +84,7 @@ def processBookFolder(fedora, folder):
         tnFile = os.path.join(config.tempDir, "tmp.jpg")
         converter.tif_to_jpg(os.path.join(folder, pages[0]), tnFile, imageMagicOpts='TN')
         #add a TN datastream to the book
-        fedoraLib.update_datastream(book, "TN", tnFile, label=unicode(config.bookCollectionName+"_TN.jpg"), mimeType=misc.getMimeType("jpg"))
+        fedoraLib.update_datastream(book, "TN", tnFile, label=unicode(config.myCollectionName+"_TN.jpg"), mimeType=misc.getMimeType("jpg"))
         os.remove(tnFile) # delete it so we can recreate it again for the next thumbnail
         # now tnFile is closed and deleted
 
@@ -113,6 +140,8 @@ def processBookFolder(fedora, folder):
 
     ocrzip.close()
 
+    # now lets check for chapter information
+
     return True
 
 # try to handle an abrupt shutdown more cleanly
@@ -126,8 +155,7 @@ def shutdown_handler(signum, frame):
     sys.exit(1)
 
 def sendReport():
-    #message.send()
-    print("Email report sent")
+    message.send()
 
 """ ====== M A I N ====== """
 def main(argv):
@@ -140,7 +168,6 @@ def main(argv):
     # parse the passed in command line options
     optionp = OptionParser()
     optionp.add_option("-c", "--config-file", type="string", dest="configfile", default=config.cfgFile, help="Path of the configuration file.")
-    optionp.add_option("-i", "--ignore-save", action="store_true", dest="ignore", default=False, help="Ignore saved script state files when launching.")
     optionp.add_option("-d", "--dry-run", action="store_true", dest="dryrun", default=False, help="Perform a dry run of the script: make folders, but don't move/convert files, and don't create any fedora objects.")
     (options, args) = optionp.parse_args()
 
@@ -180,10 +207,6 @@ def main(argv):
         message.addLine("Running in SKELETON mode")
 
     """ ====== ENVIRONMENT VARIABLES ====== """
-    # add cli,imageMagick to the path and hope for the best [remove these on production server]
-    #os.environ["PATH"] = os.environ["PATH"] + ":/usr/local/ABBYY/FREngine-Linux-i686-9.0.0.126675/Samples/Samples/CommandLineInterface"
-    #os.environ["PATH"] = os.environ["PATH"] + ":/usr/local/Linux-x86-64"
-    #os.environ["PATH"] = os.environ["PATH"] + ":/usr/local/Exif"
     convertPath = "/usr/local/bin"
     if not os.environ["PATH"].startswith(convertPath):
         os.environ["PATH"] = convertPath + ":" + os.environ["PATH"]#need to prepend this one for precedence over pre-existing convert command
@@ -199,32 +222,14 @@ def main(argv):
         message.addLine("Error connecting to fedora instance at %s" % config.fedoraUrl)
         return 5
 
-    # the host collection (topmost)
-    collection = addCollectionToFedora(fedora, config.hostCollectionName, myPid=config.hostCollectionPid, tnUrl=config.hostCollectionIcon)
-    # the aggregate (contains the books)
-    bookCollection = addCollectionToFedora(fedora, config.bookCollectionName, myPid=config.bookCollectionPid, parentPid=config.hostCollectionPid, tnUrl=config.bookCollectionIcon)
-    # the actual books are created later
-
     print("Begin timer")
     start = dt.now()
-    print("+-Scanning for books to ingest")
-    print(" +-Scanning folder: %s" % config.inDir)
 
     # we want the header information to display now instead of mixed up later with the curl status updates, so flush here
     sys.stdout.flush()
     sys.stderr.flush()
 
-    # this is the list of all folders to search in for books
-    fileList = os.listdir(config.inDir)
-    numBooks = 0
-    for file in fileList:
-        fullDirectory = os.path.join(config.inDir, file)
-        if os.path.isdir(fullDirectory):
-            # @file if a folder - we assume its a book and process its contents
-            # this will change if/when we get an index file - then we don't have to search for items
-            print("Found book folder %s" % file)
-            if processBookFolder(fedora, fullDirectory):
-                numBooks = numBooks + 1
+    processFolder(fedora, config.inDir)
 
     message.addLine("Script run complete: %d books ingested" % numBooks)
     end = dt.now()
