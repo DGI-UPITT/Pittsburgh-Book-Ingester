@@ -20,9 +20,9 @@ class ConfigData:
         self.hostCollectionName = None
         self.hostCollectionPid = None
         self.hostCollectionIcon = None
-        self.bookCollectionName = None
-        self.bookCollectionPid = None
-        self.bookCollectionIcon = None
+        self.myCollectionName = None
+        self.myCollectionPid = None
+        self.myCollectionIcon = None
         self.tempDir = os.getcwd() # temporary files will go through here
 
     def parse(self, configFile):
@@ -38,8 +38,8 @@ class ConfigData:
             self.fedoraPW = cfgp.get("Fedora", "password")
             self.hostCollectionName = unicode(cfgp.get("Fedora", "host_collection_name"))
             self.hostCollectionPid = unicode(cfgp.get("Fedora", "host_collection_pid"))
-            self.bookCollectionName = unicode(cfgp.get("Fedora", "book_collection_name"))
-            self.bookCollectionPid = unicode(cfgp.get("Fedora", "book_collection_pid"))
+            self.myCollectionName = unicode(cfgp.get("Fedora", "my_collection_name"))
+            self.myCollectionPid = unicode(cfgp.get("Fedora", "my_collection_pid"))
             self.solrUrl = cfgp.get("Solr", "url")
             self.inDir = os.path.expanduser(cfgp.get("Controller", "input_dir"))
             self.mailTo = cfgp.get("Controller", "mail_to").replace(",", " ")
@@ -56,9 +56,9 @@ class ConfigData:
             self.hostCollectionIcon = None
 
         try :
-            self.bookCollectionIcon = os.path.expanduser(cfgp.get("Controller", "book_collection_thumbnail"))
+            self.myCollectionIcon = os.path.expanduser(cfgp.get("Controller", "my_collection_thumbnail"))
         except:
-            self.bookCollectionIcon = None
+            self.myCollectionIcon = None
 
         return True
 
@@ -72,14 +72,14 @@ class ConfigData:
         print("password = %s" % self.fedoraPW)
         print("host_collection_name = %s" % self.hostCollectionName)
         print("host_collection_pid = %s" % self.hostCollectionPid)
-        print("book_collection_name = %s" % self.bookCollectionName)
-        print("book_collection_pid = %s" % self.bookCollectionPid)
+        print("my_collection_name = %s" % self.myCollectionName)
+        print("my_collection_pid = %s" % self.myCollectionPid)
         print("\n[Solr]")
         print("url = %s" % self.solrUrl)
         print("\n[Controller]")
         print("input_dir = %s" % self.inDir)
         print("host_collection_thumbnail = %s" % self.hostCollectionIcon)
-        print("book_collection_thumbnail = %s" % self.bookCollectionIcon)
+        print("my_collection_thumbnail = %s" % self.myCollectionIcon)
         print("mail_to = %s" % self.mailTo)
         print("======================================================")
 
