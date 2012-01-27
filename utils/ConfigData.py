@@ -6,11 +6,14 @@ Created on Oct. 12 2011
 
 import os, sys, pwd
 import ConfigParser
+from Mailer import *
 
 class ConfigData:
     def __init__(self, saveFile="IngesterState.save"):
         self.cfgFile = "controller.cfg"
-        self.saveFile = saveFile
+        self.dryrun = False
+        self.message = EmailMessage()
+
         self.fedoraUrl = None
         self.fedoraNS = None
         self.fedoraUser = None
@@ -91,9 +94,3 @@ class ConfigData:
 
     def fileIsComplete(self, file):
         return os.path.isfile(file.replace(self.inDir, self.outDir))
-
-    def getTargetUid(self):
-        return self.targetUser[2]
-
-    def getTargetGid(self):
-        return self.targetUser[3]
