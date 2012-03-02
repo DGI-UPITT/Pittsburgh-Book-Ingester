@@ -66,6 +66,7 @@ def createObjectFromFiles(fedora, config, objectData):
         ocrzip = None
 
     fullPDF = os.path.join(config.tempDir, "%s.pdf" % baseName)
+    fullOCR = os.path.join(config.tempDir, "%s-full.ocr" % baseName)
 
     for idx, page in enumerate(pages):
         print("\n==========\nIngesting object %d of %d: %s" % (idx+1, count, page))
@@ -74,7 +75,6 @@ def createObjectFromFiles(fedora, config, objectData):
 
         #pagePid = fedora.getNextPID(config.fedoraNS)
         pagePid = "%s-%d" % (objPid, idx+1)
-        # pageCModel doesn't exist - its just here as a placeholder
 
         extraNamespaces = { 'pageNS' : 'info:islandora/islandora-system:def/pageinfo#' }
         extraRelationships = { fedora_relationships.rels_predicate('pageNS', 'isPageNumber') : str(idx+1) }
@@ -82,6 +82,7 @@ def createObjectFromFiles(fedora, config, objectData):
         if not config.dryrun:
             # create the object (page)
             try:
+                # pageCModel doesn't exist - its just here as a placeholder
                 obj = addObjectToFedora(fedora, unicode("%s-%s" % (baseName, basePage)), pagePid, objPid, "archiveorg:pageCModel",
                         extraNamespaces=extraNamespaces, extraRelationships=extraRelationships)
             except FedoraConnectionException, fcx:
@@ -99,8 +100,8 @@ def createObjectFromFiles(fedora, config, objectData):
             os.remove(jp2File) # finished with that
 
             pdfFile = os.path.join(config.tempDir, "%s.pdf" % basePage)
-            converter.tif_to_pdf(tifFile, pdfFile, ['-q', '25'])
-            fedoraLib.update_datastream(obj, u'PDF', pdfFile, label=unicode("%s.pdf" % basePage), mimeType=misc.getMimeType("pdf"))
+            converter.tif_to_pdf(tifFile, pdfFile, 'default')
+            #fedoraLib.update_datastream(obj, u'PDF', pdfFile, label=unicode("%s.pdf" % basePage), mimeType=misc.getMimeType("pdf"))
             # for the first page, move it to the full when finished with it
             if idx == 0:
                 os.rename(pdfFile, fullPDF)
@@ -116,6 +117,7 @@ def createObjectFromFiles(fedora, config, objectData):
                 if ocrFileName in ocrzip.namelist():
                     ocrFile = ocrzip.extract(ocrFileName, config.tempDir)
                     fedoraLib.update_datastream(obj, u"OCR", os.path.join(config.tempDir, ocrFile), label=unicode(ocrFileName), mimeType=misc.getMimeType("txt"))
+                    #fullOCR
                     os.remove(os.path.join(config.tempDir, ocrFileName)) # get rid of that temp file
         sys.stdout.flush()
         sys.stderr.flush()
