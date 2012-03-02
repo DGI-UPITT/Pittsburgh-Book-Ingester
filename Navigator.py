@@ -26,8 +26,6 @@ def processFolder(fedora, config):
     completeFiles = 0
     for subFolder in os.listdir(folder):
         if os.path.isdir(os.path.join(folder, subFolder)):
-            if subFolder != "00awa1617m":
-                continue
 
             print("Scan Folder %s" % subFolder)
             fileDict = { 'label': subFolder, 'datastreams' : { } }
@@ -105,7 +103,7 @@ def ingestPagesFromFolder(fedora, config, bookFolder):
     addFileByPattern("TN", "*.thumb.jpg")
     addFileByPattern("DC", "*.dc.xml")
 
-    
+
     print("Create thumbnail for book using %s" % pages[0])
     # create a TN image using page 1
     if not config.dryrun:
