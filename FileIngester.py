@@ -62,6 +62,7 @@ def createObjectFromFiles(fedora, config, objectData):
     zipName = objectData['ocr']
     if zipName and zipfile.is_zipfile(zipName):
         ocrzip = zipfile.ZipFile(zipName, "r")
+        ocr_list = []
     else:
         ocrzip = None
 
@@ -123,7 +124,9 @@ def createObjectFromFiles(fedora, config, objectData):
                 if ocrFileName in ocrzip.namelist():
                     ocrFile = ocrzip.extract(ocrFileName, config.tempDir)
                     fedoraLib.update_datastream(obj, u"OCR", os.path.join(config.tempDir, ocrFile), label=unicode(ocrFileName), mimeType=misc.getMimeType("txt"))
-                    #fullOCR
+                    f = open(os.path.join(config.tempDir, ocrFile),'r')
+                    ocr_list.append(f.read())
+                    f.close()
                     os.remove(os.path.join(config.tempDir, ocrFileName)) # get rid of that temp file
         sys.stdout.flush()
         sys.stderr.flush()
@@ -135,5 +138,15 @@ def createObjectFromFiles(fedora, config, objectData):
         fedoraLib.update_datastream(bookObj, u"PDF", fullPDF, label=os.path.basename(fullPDF), mimeType=misc.getMimeType("pdf"))
         os.remove(fullPDF)
     ocrzip.close()
+
+    # create book-level OCR datastream
+    if not config.dryrun:
+        if ocr_list:
+            full_ocr = ''.join(ocr_list)
+            full_ocr_file = open(fullOCR, "r+")
+            full_ocr_file.write(full_ocr)
+            full_ocr_file.close()
+            fedoraLib.update_datastream(bookObj, u"BOOKOCR", fullOCR, label=os.path.basename(fullOCR), mimeType=misc.getMimeType("txt"))
+            os.remove(fullOCR)
 
     return True
