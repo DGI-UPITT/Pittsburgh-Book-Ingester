@@ -50,7 +50,7 @@ def createObjectFromFiles(fedora, config, objectData):
         tnFile = os.path.join(config.tempDir, "tmp.jpg")
         converter.tif_to_jpg(os.path.join(bookFolder, pages[0]), tnFile, imageMagicOpts='TN')
         #add a TN datastream to the book
-        fedoraLib.update_datastream(bookObj, "TN", tnFile, label=unicode(config.myCollectionName+"_TN.jpg"), mimeType=misc.getMimeType("jpg"))
+        fedoraLib.update_datastream(bookObj, u"TN", tnFile, label=unicode(config.myCollectionName+"_TN.jpg"), mimeType=misc.getMimeType("jpg"))
         os.remove(tnFile) # delete it so we can recreate it again for the next thumbnail
         # now tnFile is closed and deleted
 
@@ -76,10 +76,11 @@ def createObjectFromFiles(fedora, config, objectData):
         basePage = os.path.splitext(os.path.basename(page))[0]
 
         #pagePid = fedora.getNextPID(config.fedoraNS)
-        pagePid = "%s-%d" % (objPid, idx+1)
+        pagePid = "%s-%d" % (objPid, idx+1) # objPid contains the namespace part of the pid
 
         extraNamespaces = { 'pageNS' : 'info:islandora/islandora-system:def/pageinfo#' }
-        extraRelationships = { fedora_relationships.rels_predicate('pageNS', 'isPageNumber') : str(idx+1) }
+        extraRelationships = { fedora_relationships.rels_predicate('pageNS', 'isPageNumber') : str(idx+1),
+                               fedora_relationships.rels_predicate('pageNS', 'isPageOf') : str(objPid) }
 
         if not config.dryrun:
             # create the object (page)
@@ -111,6 +112,27 @@ def createObjectFromFiles(fedora, config, objectData):
             else:
                 manipulator.appendPDFwithPDF(fullPDF, pdfFile)
                 os.remove(pdfFile)
+
+            if config.jhoveCmd != None: # config.jhoveCmd will be empty if jhove extraction cannot be completed
+                # extract mix metadata
+                #cmd= jhove -h xml $INFILE | xsltproc jhove2mix.xslt - > `basename ${$INFILE%.*}.mix`
+                mixFile = os.path.join(config.tempDir, "%s.mix.xml" % baseName)
+                """ extract this into tif_to_mix() """
+                outfile = open(mixFile, "w")
+                jhoveCmd1 = ["jhove", "-h", "xml", tifFile]
+                #jhoveCmd2 = ["xsltproc", "data/jhove2mix.xslt", "-"] # complete cmd for xsltproc
+                #jhoveCmd2 = ["xalan", "-xsl", "data/jhove2mix.xslt"] # complete cmd for xalan
+                jhoveCmd2 = config.jhoveCmd
+                p1 = subprocess.Popen(jhoveCmd1, stdout=subprocess.PIPE)
+                p2 = subprocess.Popen(jhoveCmd2, stdin=p1.stdout, stdout=outfile)
+                r = p2.communicate()
+                if os.path.getsize(mixFile) == 0:
+                    # failed for some reason
+                    print("jhove conversion failed")
+                outfile.close()
+                """ end extract """
+                fedoraLib.update_datastream(obj, u"MIX", mixFile, label=os.path.basename(mixFile), mimeType=misc.getMimeType("xml"))
+                os.remove(mixFile)
 
             # ingest the ocr if it exists
             if ocrzip:
