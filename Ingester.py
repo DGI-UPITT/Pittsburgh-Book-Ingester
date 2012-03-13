@@ -1,11 +1,12 @@
 #!/usr/bin/python
+# -*- coding: utf8 -*-
 """
 Created on Oct. 12 2011
 
 @author: Jason MacWilliams
 """
 
-import sys, os, time, signal, atexit
+import sys, os, time, signal, atexit, subprocess
 from optparse import OptionParser
 #import pdb
 
@@ -79,9 +80,27 @@ def main(argv):
         config.message.addLine("Running in SKELETON mode")
 
     """ ====== ENVIRONMENT VARIABLES ====== """
+    os.environ["PATH"] = os.environ["PATH"] + ":/opt/jhove"
     convertPath = "/usr/local/bin"
     if not os.environ["PATH"].startswith(convertPath):
         os.environ["PATH"] = convertPath + ":" + os.environ["PATH"]#need to prepend this one for precedence over pre-existing convert command
+
+    print("Searching for xslt processors for MIX data")
+    r = subprocess.call(["which", "xalan"])
+    if r == 0:
+        config.jhoveCmd = ["xalan", "-xsl", "data/jhove2mix.xslt"]
+    else:
+        if subprocess.call(["which", "xsltproc"]) == 0:
+            config.jhoveCmd = ["xsltproc", "data/jhove2mix.xslt", "-"]
+        else:
+            config.jhoveCmd = None
+
+    if config.jhoveCmd != None:
+        print("Jhove extraction enabled via %s" % config.jhoveCmd[0])
+        config.message.addLine("Jhove extraction enabled via %s" % config.jhoveCmd[0])
+    else:
+        print("Unable to find either xalan or xsltproc - jhove extraction disabled")
+        config.message.addLine("Unable to find either xalan or xsltproc - jhove extraction disabled")
 
     # display to the user what settings are being used for this run
     config.printSettings()
