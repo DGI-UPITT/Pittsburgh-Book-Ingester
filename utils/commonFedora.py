@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 from types import DictType
 import os
 from islandoraUtils import fileConverter as converter
@@ -58,7 +59,7 @@ def createRelsExt(childObject, parentPid, contentModel, extraNamespaces={}, extr
     rels_ext.addRelationship(fedora_relationships.rels_predicate('fedora', 'isMemberOfCollection'), [parentPid, "pid"])
     if extraRelationships and type(extraRelationships) is DictType:
         for k, v in extraRelationships.iteritems():
-            rels_ext.addRelationship(k, [v, "literal"])
+            rels_ext.addRelationship(k, [v, "pid"]) # use pid instead of literal so it is stored in rdf:resource instead of the text node
 
     loop = True
     while loop:
@@ -73,7 +74,7 @@ def createRelsExt(childObject, parentPid, contentModel, extraNamespaces={}, extr
                 print("Error updating obj(%s) RELS-EXT" % childObject.pid)
     return rels_ext
 
-def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", contentModel="islandora:collectionCModel", tnUrl=None):
+def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", contentModel="islandora:collectionCModel", tnUrl=None, extraNamespaces={}, extraRelationships={}):
     """
     Add a collection (not an object) to fedora
     @param fedora The fedora instance to add the collection to
@@ -103,11 +104,12 @@ def addCollectionToFedora(fedora, myLabel, myPid, parentPid="islandora:root", co
 
     # thumbnail, if one is supplied
     if tnUrl:
+        # possibly check if tnUrl is a valid image?
         tnExt = os.path.splitext(tnUrl)[1]
         fedoraLib.update_datastream(collection_object, u'TN', tnUrl, label=u"%s_TN%s" % (myLabel, tnExt), mimeType=misc.getMimeType(tnExt))
 
     # rels-ext relations
-    collection_relsext = createRelsExt(collection_object, parentPid, contentModel)
+    collection_relsext = createRelsExt(collection_object, parentPid, contentModel, extraNamespaces=extraNamespaces, extraRelationships=extraRelationships)
 
     return collection_object
 
@@ -140,9 +142,10 @@ def addObjectToFedora(fedora, myLabel, myPid, parentPid, contentModel, tnUrl=Non
 
     # thumbnail, if one is supplied
     if tnUrl:
-        # possibly check if tnUrl is a valid jpg
+        # possibly check if tnUrl is a valid image?
         #add a TN datastream to the object after creating it from the book cover
-        fedoraLib.update_datastream(obj, 'TN', tnUrl, label=myLabel+'_TN.jpg', mimeType='image/jpeg')
+        tnExt = os.path.splitext(tnUrl)[1]
+        fedoraLib.update_datastream(obj, u'TN', tnUrl, label=u"%s_TN%s" % (myLabel, tnExt), mimeType=misc.getMimeType(tnExt))
 
     # rels-ext relations
     obj_relsext = createRelsExt(obj, parentPid, contentModel, extraNamespaces=extraNamespaces, extraRelationships=extraRelationships)
