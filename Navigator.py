@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 from utils.commonFedora import *
 import glob, zipfile, sys
 import FileIngester
@@ -10,7 +11,7 @@ def processFolder(fedora, config):
 
     folder = config.inDir
 
-    # first make sure folder is a valid folder
+    # first make sure @folder is a valid folder
     if not os.path.isdir(folder):
         return False
 
@@ -21,13 +22,17 @@ def processFolder(fedora, config):
     myCollection = addCollectionToFedora(fedora, config.myCollectionName, myPid=config.myCollectionPid, parentPid=config.hostCollectionPid, tnUrl=config.myCollectionIcon)
 
     # this is the list of all folders to search in for books
-    baseFileDict = { 'parentPid' : config.myCollectionPid, 'contentModel' : 'archiveorg:bookCModel' }
+    baseFileDict = { 'parentPid' : config.myCollectionPid, 'contentModel' : 'islandora:bookCModel' }
     totalFiles = 0
     completeFiles = 0
     for subFolder in os.listdir(folder):
         if os.path.isdir(os.path.join(folder, subFolder)):
 
             print("Scan Folder %s" % subFolder)
+            # the single item trap - very helpful for testing
+            #if subFolder != "00awa1617m":
+            #    continue
+
             fileDict = { 'label': subFolder, 'datastreams' : { } }
 
             def addFileByPattern(label, pattern):
