@@ -50,7 +50,7 @@ def createObjectFromFiles(fedora, config, objectData):
         tnFile = os.path.join(config.tempDir, "tmp.jpg")
         converter.tif_to_jpg(os.path.join(bookFolder, pages[0]), tnFile, imageMagicOpts='TN')
         #add a TN datastream to the book
-        fedoraLib.update_datastream(bookObj, "TN", tnFile, label=unicode(config.myCollectionName+"_TN.jpg"), mimeType=misc.getMimeType("jpg"))
+        fedoraLib.update_datastream(bookObj, u"TN", tnFile, label=unicode(config.myCollectionName+"_TN.jpg"), mimeType=misc.getMimeType("jpg"))
         os.remove(tnFile) # delete it so we can recreate it again for the next thumbnail
         # now tnFile is closed and deleted
 
@@ -75,10 +75,11 @@ def createObjectFromFiles(fedora, config, objectData):
         basePage = os.path.splitext(os.path.basename(page))[0]
 
         #pagePid = fedora.getNextPID(config.fedoraNS)
-        pagePid = "%s-%d" % (objPid, idx+1)
+        pagePid = "%s-%d" % (objPid, idx+1) # objPid contains the namespace part of the pid
 
         extraNamespaces = { 'pageNS' : 'info:islandora/islandora-system:def/pageinfo#' }
-        extraRelationships = { fedora_relationships.rels_predicate('pageNS', 'isPageNumber') : str(idx+1) }
+        extraRelationships = { fedora_relationships.rels_predicate('pageNS', 'isPageNumber') : str(idx+1),
+                               fedora_relationships.rels_predicate('pageNS', 'isPageOf') : str(objPid) }
 
         if not config.dryrun:
             # create the object (page)
