@@ -118,6 +118,27 @@ def createObjectFromFiles(fedora, config, objectData):
                 manipulator.appendPDFwithPDF(fullPDF, pdfFile)
                 os.remove(pdfFile)
 
+            if config.jhoveCmd != None: # config.jhoveCmd will be empty if jhove extraction cannot be completed
+                # extract mix metadata
+                #cmd= jhove -h xml $INFILE | xsltproc jhove2mix.xslt - > `basename ${$INFILE%.*}.mix`
+                mixFile = os.path.join(config.tempDir, "%s.mix.xml" % baseName)
+                """ extract this into tif_to_mix() """
+                outfile = open(mixFile, "w")
+                jhoveCmd1 = ["jhove", "-h", "xml", tifFile]
+                #jhoveCmd2 = ["xsltproc", "data/jhove2mix.xslt", "-"] # complete cmd for xsltproc
+                #jhoveCmd2 = ["xalan", "-xsl", "data/jhove2mix.xslt"] # complete cmd for xalan
+                jhoveCmd2 = config.jhoveCmd
+                p1 = subprocess.Popen(jhoveCmd1, stdout=subprocess.PIPE)
+                p2 = subprocess.Popen(jhoveCmd2, stdin=p1.stdout, stdout=outfile)
+                r = p2.communicate()
+                if os.path.getsize(mixFile) == 0:
+                    # failed for some reason
+                    print("jhove conversion failed")
+                outfile.close()
+                """ end extract """
+                fedoraLib.update_datastream(obj, u"MIX", mixFile, label=os.path.basename(mixFile), mimeType=misc.getMimeType("xml"))
+                os.remove(mixFile)
+
             # ingest the ocr if it exists
             if ocrzip:
                 # try to find the files' ocr data
