@@ -85,7 +85,7 @@ def createObjectFromFiles(fedora, config, objectData):
             # create the object (page)
             try:
                 # pageCModel doesn't exist - its just here as a placeholder
-                obj = addObjectToFedora(fedora, unicode("%s-%s" % (baseName, basePage)), pagePid, objPid, "archiveorg:pageCModel",
+                obj = addObjectToFedora(fedora, unicode("%s-%s" % (baseName, basePage)), pagePid, objPid, "islandora:pageCModel",
                         extraNamespaces=extraNamespaces, extraRelationships=extraRelationships)
             except FedoraConnectionException, fcx:
                 print("Connection error while trying to add fedora object (%s) - the connection to fedora may be broken", page)

@@ -21,7 +21,7 @@ def processFolder(fedora, config):
     myCollection = addCollectionToFedora(fedora, config.myCollectionName, myPid=config.myCollectionPid, parentPid=config.hostCollectionPid, tnUrl=config.myCollectionIcon)
 
     # this is the list of all folders to search in for books
-    baseFileDict = { 'parentPid' : config.myCollectionPid, 'contentModel' : 'archiveorg:bookCModel' }
+    baseFileDict = { 'parentPid' : config.myCollectionPid, 'contentModel' : 'islandora:bookCModel' }
     totalFiles = 0
     completeFiles = 0
     for subFolder in os.listdir(folder):
