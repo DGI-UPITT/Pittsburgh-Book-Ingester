@@ -96,7 +96,7 @@ def createObjectFromFiles(fedora, config, objectData):
             fedoraLib.update_datastream(obj, u"TIFF", tifFile, label=unicode("%s.tif" % basePage), mimeType=misc.getMimeType("tiff"))
 
             # create a thumbnail
-            tnFile = os.path.join(config.tempDir, "%s.png" % basePage)
+            tnFile = os.path.join(config.tempDir, "%s_TN.jpg" % basePage)
             converter.tif_to_jpg(tifFile, tnFile, imageMagicOpts='TN')
             fedoraLib.update_datastream(obj, u"TN", tnFile, label=unicode("%s_TN.jpg" % basePage), mimeType=misc.getMimeType("jpg"))
             os.remove(tnFile) # now tnFile is closed and deleted
